@@ -5,9 +5,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
 import smtplib
-
-# -------------------------- 邮箱会从 GitHub 密钥读取 --------------------------
 import os
+
+# 邮箱配置
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 EMAIL_AUTH_CODE = os.getenv("EMAIL_AUTH_CODE")
 RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
@@ -63,7 +63,7 @@ def send():
     img = get_img()
     day = datetime.now().strftime("%Y-%m-%d")
     
-    html = f""""""
+    html = f'''
 <html>
 <body style="background:#111; color:#fff; padding:20px;">
 <div style="max-width:700px; margin:auto; background:#1a1a1a; border-radius:10px;">
@@ -87,7 +87,7 @@ def send():
 </div>
 </body>
 </html>
-""""""
+'''
 
     msg = MIMEMultipart()
     msg["Subject"] = f"⚔️ 战锤日报 {day}"
