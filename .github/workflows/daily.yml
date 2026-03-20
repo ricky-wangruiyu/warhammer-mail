@@ -1,18 +1,16 @@
-name: Warhammer Daily
+name: Warhammer
 on:
+  push:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-    - run: pip install requests beautifulsoup4
-    - run: python warhammer.py
-      env:
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-        EMAIL_AUTH_CODE: ${{ secrets.EMAIL_AUTH_CODE }}
-        RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - run: python warhammer.py
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          EMAIL_AUTH_CODE: ${{ secrets.EMAIL_AUTH_CODE }}
