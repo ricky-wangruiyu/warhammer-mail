@@ -1,3 +1,4 @@
+print("✅ 脚本加载成功！正在准备发送邮件...")
 import requests
 import random
 from datetime import datetime
