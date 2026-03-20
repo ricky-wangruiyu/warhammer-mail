@@ -3,7 +3,7 @@ on:
   push:
   workflow_dispatch:
   schedule:
-    - cron: "16 1 * * *"  # 👈 这就是 1点16分
+    - cron: "18 13 * * *"  # 👈 这就是 1点16分
 
 jobs:
   run:
