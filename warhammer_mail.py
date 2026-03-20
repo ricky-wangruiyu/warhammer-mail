@@ -1,4 +1,6 @@
 import os
+os.environ['HTTP_PROXY'] = 'http://proxy-server:port' # 如果需要
+os.environ['HTTPS_PROXY'] = 'http://proxy-server:portimport os
 import smtplib
 import random
 import requests
