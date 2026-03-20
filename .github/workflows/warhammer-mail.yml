@@ -1,0 +1,25 @@
+name: Warhammer Mail
+
+on:
+schedule:
+- cron: '0 * * * *' # 每小时整点执行
+workflow_dispatch: # 允许手动触发测试
+
+jobs:
+send-mail:
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v4
+
+- uses: actions/setup-python@v5
+with:
+python-version: '3.11'
+
+- run: pip install -r requirements.txt
+
+- run: python warhammer_mail.py
+env:
+SMTP_USER: ${{ secrets.SMTP_USER }}
+SMTP_PASS: ${{ secrets.SMTP_PASS }}
+EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+EMAIL_TO: ${{ secrets.EMAIL_TO }}
