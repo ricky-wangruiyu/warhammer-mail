@@ -14,10 +14,9 @@ steps:
 - uses: actions/setup-python@v5
 with:
 python-version: '3.11'
-
 - run: pip install -r requirements.txt
 
-- run: python warhammer_mail.py
+- run: python warhammer.py
 env:
 SMTP_USER: ${{ secrets.SMTP_USER }}
 SMTP_PASS: ${{ secrets.SMTP_PASS }}
