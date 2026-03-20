@@ -1,15 +1,21 @@
-name: Warhammer
+name: Warhammer Daily
 on:
   push:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "16 1 * * *"  # 👈 这就是 1点16分
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
       - name: Run script
         run: python warhammer.py
         env:
