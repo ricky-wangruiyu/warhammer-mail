@@ -13,94 +13,108 @@ RECEIVER_EMAIL = os.getenv("RECEIVER_EMAIL")
 SMTP_SERVER = "smtp.qq.com"
 SMTP_PORT = 587
 
-# 稳定爬取用的 User-Agent，防止被网站反爬
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 }
 
-# ------------------- 全部使用稳定、可访问的中文站/公开API -------------------
 def get_img():
-    """稳定随机图片（原 imgapi.cn 已更新参数 fl=meizi，保留美图风格适合日报头图）"""
+    """随机美图（或战锤风图片）"""
     try:
+        # imgapi.cn 当前参数 fl=meizi 仍有效
         url = "https://imgapi.cn/api.php?fl=meizi"
-        # 使用 HEAD + allow_redirects 获取最终图片直链
-        response = requests.head(url, headers=HEADERS, allow_redirects=True, timeout=10)
-        response.raise_for_status()
-        return response.url
-    except Exception:
-        return "https://i.imgur.com/7V7lN.jpg"  # 备用战锤风图片
+        resp = requests.head(url, headers=HEADERS, allow_redirects=True, timeout=8)
+        resp.raise_for_status()
+        if 'image' in resp.headers.get('Content-Type', ''):
+            return resp.url
+    except:
+        pass
+    # 多源 fallback
+    fallbacks = [
+        "https://i.imgur.com/7V7lN.jpg",
+        "https://picsum.photos/800/600?random=" + str(random.randint(1,1000))
+    ]
+    return random.choice(fallbacks)
 
 def get_joke():
-    """稳定战锤日报段子（使用 RollToolsApi 长期维护的中文段子API，无需注册即可用示例密钥）"""
+    """中文段子 - 使用 aa1.cn 的公开笑话接口（无需key，稳定）"""
     try:
-        url = "https://www.mxnzp.com/api/jokes/list/random"
-        params = {
-            "app_id": "ixssxqertpltndez",      # 示例公钥（长期可用，建议自己注册替换更稳定）
-            "app_secret": "QUF5S2JLZkNqSHdyeVVLczdCNSt1QT09"
-        }
-        r = requests.get(url, params=params, headers=HEADERS, timeout=10)
+        url = "https://v.api.aa1.cn/api/duanzi/index.php?type=json"
+        r = requests.get(url, headers=HEADERS, timeout=8)
         r.raise_for_status()
         data = r.json()
-        if data.get("code") == 1 and data.get("data", {}).get("list"):
-            return data["data"]["list"][0].get("content", "").strip()
-        return "WAAAGH!"
-    except Exception:
-        return "WAAAGH!"  # 超稳定备用
+        if isinstance(data, dict) and 'text' in data:
+            return data['text'].strip()
+        elif isinstance(data, list) and data:
+            return data[0].strip()
+    except:
+        pass
+    # 极简备用段子池（可自行扩展）
+    backups = [
+        "为什么绿皮兽人总是喊 WAAAGH!? 因为他们连 'hello' 都不会说。",
+        "帝皇：我坐在王座上思考人类的未来…… 智障原体：爸！我要吃薯片！",
+        "混沌邪神最怕什么？怕被举报侵权。"
+    ]
+    return random.choice(backups)
 
 def get_char():
-    """战锤中文人物志（Fandom 随机页面，极其稳定）"""
+    """战锤人物志 - Fandom 随机中文页（极稳）"""
     try:
         url = "https://warhammer40k.fandom.com/zh/wiki/Special:Random"
         r = requests.get(url, headers=HEADERS, timeout=10)
         r.raise_for_status()
-        s = BeautifulSoup(r.text, "html.parser")
-        title = s.find("h1").get_text(strip=True)
-        p = s.find("p").get_text(strip=True)[:400]
-        return f"【{title}】{p}"
-    except Exception:
-        return "【帝皇】人类的守护者，端坐黄金王座万年之久"
+        soup = BeautifulSoup(r.text, "html.parser")
+        title_tag = soup.find("h1", {"id": "firstHeading"}) or soup.find("h1")
+        p_tag = soup.find("div", {"class": "mw-parser-output"}).find("p", recursive=False) if soup.find("div", {"class": "mw-parser-output"}) else soup.find("p")
+        
+        title = title_tag.get_text(strip=True) if title_tag else "未知英雄"
+        intro = p_tag.get_text(strip=True)[:380] if p_tag else ""
+        return f"【{title}】{intro}"
+    except:
+        return "【帝皇】人类的守护者，端坐黄金王座万年之久，默默承受着帝国的重担。"
 
 def get_news():
-    """战锤官方中文新闻（直接抓取社区首页最新标题，结构稳定）"""
+    """战锤新闻 - 改用 warhammer-community 主站最新文章（英文但标题可读，fallback中文描述）"""
     try:
-        url = "https://www.warhammer-community.com/zh-hans"
+        url = "https://www.warhammer-community.com/news/"
         r = requests.get(url, headers=HEADERS, timeout=10)
         r.raise_for_status()
-        s = BeautifulSoup(r.text, "html.parser")
-        arr = [x.get_text(strip=True) for x in s.find_all("h3") if x.get_text(strip=True)]
-        return " • ".join(arr[:3]) if arr else "新模型 • 新剧情 • 新战役"
-    except Exception:
-        return "新模型 • 新剧情 • 新战役"
+        soup = BeautifulSoup(r.text, "html.parser")
+        titles = [h.get_text(strip=True) for h in soup.select("article h3") if h.get_text(strip=True)]
+        if titles:
+            return " • ".join(titles[:3])
+    except:
+        pass
+    # 中文 fallback（可替换成 RSS 或其他聚合）
+    return "新杀戮周刊更新 • 最新战团涂装展示 • 40k 平衡数据调整"
 
-# ------------------- 发送 -------------------
 def send():
     img = get_img()
     day = datetime.now().strftime("%Y-%m-%d")
     
     html = f'''
 <html>
-<body style="background:#111; color:#fff; padding:20px;">
-<div style="max-width:700px; margin:auto; background:#1a1a1a; border-radius:10px;">
-<img src="{img}" style="width:100%;">
+<body style="background:#111; color:#fff; padding:20px; font-family: sans-serif;">
+<div style="max-width:700px; margin:auto; background:#1a1a1a; border-radius:10px; overflow:hidden;">
+<img src="{img}" style="width:100%; display:block;">
 <div style="padding:25px;">
-<h2 style="color:#d4af37; text-align:center;">⚔️ 战锤日报 {day}</h2>
+<h2 style="color:#d4af37; text-align:center; margin:0 0 20px;">⚔️ 战锤日报 {day}</h2>
 
 <div style="background:#222; padding:15px; margin:10px 0; border-radius:8px;">
-<h3 style="color:#f5c518;">📜 战锤段子</h3>
-<p>{get_joke()}</p>
+<h3 style="color:#f5c518; margin-top:0;">📜 今日段子</h3>
+<p style="margin:8px 0;">{get_joke()}</p>
 </div>
 
 <div style="background:#222; padding:15px; margin:10px 0; border-radius:8px;">
-<h3 style="color:#f5c518;">⚡ 人物志</h3>
-<p>{get_char()}</p>
+<h3 style="color:#f5c518; margin-top:0;">⚡ 人物志</h3>
+<p style="margin:8px 0;">{get_char()}</p>
 </div>
 
 <div style="background:#222; padding:15px; margin:10px 0; border-radius:8px;">
-<h3 style="color:#f5c518;">📰 官方新闻</h3>
-<p>{get_news()}</p>
+<h3 style="color:#f5c518; margin-top:0;">📰 官方/社区新闻</h3>
+<p style="margin:8px 0;">{get_news()}</p>
 </div>
 
-<p style="text-align:center; color:#777;">为了帝皇！</p>
+<p style="text-align:center; color:#777; margin:20px 0 0;">为了帝皇！荣耀归于人类！</p>
 </div>
 </div>
 </body>
@@ -113,11 +127,14 @@ def send():
     msg["To"] = RECEIVER_EMAIL
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as s:
-        s.starttls()
-        s.login(SENDER_EMAIL, EMAIL_AUTH_CODE)
-        s.send_message(msg)
-    print("OK - 战锤日报发送成功！")
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SENDER_EMAIL, EMAIL_AUTH_CODE)
+            server.send_message(msg)
+        print("战锤日报发送成功！")
+    except Exception as e:
+        print(f"邮件发送失败: {e}")
 
 if __name__ == "__main__":
     send()
